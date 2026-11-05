@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PNP Properties | Turning spaces into statements</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --ink: #07161e;
+    --dark: #1c2b33;
+    --accent: #a53b26;
+    --cream: #fcf9f4;
+    --bg: #f6f3ee;
+    --bg2: #f0ede9;
+    --bg3: #ebe8e3;
+    --white: #ffffff;
+    --body: #43474a;
+    --muted: #73787b;
+    --foot: #83929c;
+    --green: #25D366;
+    --shadow: 0 1px 1px rgba(0,0,0,0.05);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; scroll-padding-top: 120px; }
+  body { font-family: 'Inter', system-ui, sans-serif; color: var(--body); background: var(--cream); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; display: block; }
+  button, input, select { font: inherit; }
+  .h { font-family: 'Manrope', 'Inter', sans-serif; color: var(--ink); font-weight: 700; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 32px; width: 100%; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--accent); }
+  .section { padding: 32px 40px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; font-weight: 600; cursor: pointer; border: none; transition: transform .15s ease, opacity .15s ease; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:focus-visible, a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .icon { width: 16px; height: 16px; flex: 0 0 auto; }
+
+
+  .properties { background: var(--bg); }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 24px; }
+  .chip { background: var(--white); border: 1px solid var(--bg2); border-radius: 9999px; padding: 8px 16px; font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; }
+  .chip.active { background: var(--ink); color: var(--white); border-color: var(--ink); }
+  .prop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 24px; }
+  .prop { background: var(--white); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); display: flex; flex-direction: column; }
+  .prop-img { height: 200px; position: relative; background: linear-gradient(135deg, #c9b59a, #3e4a4f); }
+  .prop-img img { width: 100%; height: 100%; object-fit: cover; }
+  .prop-badge { position: absolute; top: 12px; left: 12px; background: rgba(252,249,244,.95); border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; }
+  .prop-body { padding: 20px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .prop-body h3 { font-size: 20px; line-height: 28px; }
+  .prop-loc { font-size: 14px; color: var(--muted); }
+  .prop-price { font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 22px; color: var(--ink); }
+  .prop-meta { font-size: 12px; font-weight: 600; letter-spacing: .48px; color: var(--accent); text-transform: uppercase; }
+  .prop-desc { font-size: 14px; line-height: 22px; color: var(--body); }
+  .prop-cta { margin-top: auto; padding-top: 12px; }
+  .prop-cta a { display: inline-block; background: var(--accent); color: var(--white); padding: 10px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; }
+  .prop-empty { color: var(--muted); font-size: 14px; grid-column: 1 / -1; }
+  @media (max-width: 900px) { .prop-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .prop-grid { grid-template-columns: 1fr; } }
+
+  /* Top bar */
+  .topbar { background: var(--dark); color: var(--cream); font-size: 12px; font-weight: 600; letter-spacing: .48px; }
+  .topbar .wrap { display: flex; justify-content: space-between; align-items: center; padding-top: 8px; padding-bottom: 8px; }
+  .topbar .left { display: flex; gap: 8px; align-items: center; }
+  .topbar .right { display: flex; gap: 24px; align-items: center; color: #83929c; }
+  .topbar .right strong { color: var(--cream); font-weight: 600; }
+
+  /* Header */
+  .header { position: sticky; top: 0; z-index: 50; background: rgba(252,249,244,.95); backdrop-filter: blur(12px); box-shadow: 0 1px 8px rgba(28,43,51,.04); }
+  .header .wrap { display: flex; justify-content: space-between; align-items: center; height: 80px; }
+  .brand { display: flex; align-items: center; gap: 8px; }
+  .brand img { width: 48px; height: 48px; border-radius: 8px; object-fit: contain; background: var(--white); }
+  .brand-name { font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -.5px; color: var(--ink); line-height: 1.1; }
+  .brand-tag { font-size: 11px; font-style: italic; color: #43474a; margin-top: 2px; }
+  .nav { display: flex; gap: 24px; align-items: center; }
+  .nav a { padding: 8px 12px; font-size: 14px; font-weight: 500; color: #43474a; border-radius: 8px; }
+  .nav a.active { background: #ebe8e3; color: #1c1c19; font-weight: 700; font-size: 16px; }
+  .header-right { display: flex; gap: 12px; align-items: center; }
+  .direct { text-align: right; }
+  .direct small { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+  .direct strong { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .cta-accent { background: var(--accent); color: var(--white); padding: 8px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; box-shadow: 0 1px 1px rgba(0,0,0,.05); }
+
+  /* Hero */
+  .hero { padding: 16px 40px 32px; }
+  .hero-grid { display: grid; grid-template-columns: 7fr 5fr; gap: 24px; align-items: center; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; background: var(--bg3); padding: 4px 12px; border-radius: 9999px; }
+  .pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .pill span { font-size: 12px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; color: var(--accent); }
+  .hero h1 { font-size: 48px; letter-spacing: -1.2px; line-height: 60px; margin: 24px 0 12px; }
+  .hero-sub { font-size: 18px; line-height: 29px; max-width: 560px; color: var(--body); }
+  .label-cap { font-size: 12px; font-weight: 600; letter-spacing: .48px; text-transform: uppercase; color: var(--muted); margin: 24px 0 8px; }
+  .routes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .route { background: var(--white); box-shadow: var(--shadow); border-radius: 12px; padding: 12px 8px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: transform .15s ease; }
+  .route:hover { transform: translateY(-2px); }
+  .route .ri { width: 18px; height: 18px; color: var(--ink); }
+  .route b { font-size: 14px; color: var(--ink); font-weight: 600; }
+  .route small { font-size: 11px; color: var(--body); }
+  .ctas { margin-top: 24px; }
+  .link-btn { background: var(--white); box-shadow: var(--shadow); padding: 12px 24px; font-size: 16px; color: var(--ink); font-weight: 600; border-radius: 12px; display: inline-flex; gap: 8px; align-items: center; }
+  .reassure { margin-top: 16px; font-size: 12px; font-weight: 600; letter-spacing: .48px; color: var(--body); }
+  .reassure b { color: var(--ink); }
+  .hero-visual { position: relative; height: 460px; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1); background: linear-gradient(135deg, #c9b59a 0%, #8a7560 45%, #3e4a4f 100%); }
+  .hero-visual img { width: 100%; height: 100%; object-fit: cover; }
+  .hero-visual::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(7,22,30,.8), rgba(7,22,30,0) 50%); }
+  .chip-top { position: absolute; top: 16px; left: 16px; z-index: 2; background: rgba(252,249,244,.95); backdrop-filter: blur(12px); border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; letter-spacing: .48px; color: var(--ink); display: flex; gap: 8px; align-items: center; }
+  .chip-top svg { color: var(--accent); width: 12px; height: 12px; }
+  .caption { position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 2; background: rgba(252,249,244,.95); backdrop-filter: blur(12px); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+  .caption h3 { font-size: 20px; line-height: 28px; }
+  .caption p { font-size: 14px; line-height: 22px; color: var(--body); }
+  .caption .meta { text-align: right; font-size: 11px; color: var(--muted); line-height: 16.5px; }
+  .caption .meta b { display: block; color: var(--accent); font-size: 12px; letter-spacing: .48px; font-weight: 700; }
+
+  /* Trust strip */
+  .trust { background: var(--bg2); padding: 16px 72px; }
+  .trust-row { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .trust-loc { display: flex; gap: 8px; align-items: center; font-size: 16px; font-weight: 700; color: var(--ink); }
+  .trust-loc svg { color: var(--accent); width: 16px; height: 20px; }
+  .trust-items { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; font-size: 14px; color: var(--ink); }
+  .trust-items .sep { color: var(--muted); }
+  .trust-items .muted { color: var(--muted); font-weight: 500; }
+  .trust-items .star { color: var(--accent); }
+  .trust-items .ok { color: var(--ink); font-weight: 600; display: inline-flex; gap: 6px; align-items: center; }
+  .trust-items .ok svg { color: var(--accent); width: 14px; height: 14px; }
+
+  /* Section heads */
+  .sec-head { max-width: 680px; display: flex; flex-direction: column; gap: 6px; }
+  .sec-head h2 { font-size: 36px; letter-spacing: -.72px; line-height: 44px; }
+  .sec-head p { font-size: 16px; line-height: 26px; color: var(--body); }
+
+  /* Audience */
+  .audience { background: var(--cream); }
+  .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 24px; }
+  .card { background: var(--white); box-shadow: var(--shadow); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+  .ic-box { width: 48px; height: 48px; border-radius: 12px; background: var(--bg2); display: flex; align-items: center; justify-content: center; color: var(--accent); }
+  .ic-box svg { width: 18px; height: 18px; }
+  .card .tag { font-size: 12px; font-weight: 700; letter-spacing: .48px; text-transform: uppercase; color: var(--accent); }
+  .card h3 { font-size: 24px; line-height: 32px; letter-spacing: -.24px; }
+  .card p { font-size: 14px; line-height: 22px; color: var(--body); }
+  .card ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .card li { display: flex; gap: 8px; font-size: 14px; line-height: 20px; font-weight: 500; color: var(--ink); }
+  .card li::before { content: "✓"; color: var(--accent); font-weight: 700; flex: 0 0 auto; }
+  .card .more { margin-top: auto; padding-top: 8px; font-size: 14px; font-weight: 600; color: var(--accent); }
+  .card .more::after { content: " ›"; }
+
+  /* Achievements */
+  .stats { background: var(--bg); padding: 32px 72px; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .stat { background: var(--white); box-shadow: var(--shadow); border-radius: 12px; padding: 16px 16px 38px; }
+  .stat .num { font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 48px; letter-spacing: -1.2px; line-height: 56px; color: var(--ink); }
+  .stat .num.accent { color: var(--accent); }
+  .stat h4 { font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 20px; line-height: 28px; color: var(--ink); margin-top: 4px; }
+  .stat p { font-size: 14px; line-height: 22px; color: var(--body); margin-top: 4px; }
+
+  /* Reviews */
+  .reviews { background: var(--cream); }
+  .rev-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+  .rev-head .sec-head { gap: 6px; }
+  .rev-link { font-size: 14px; font-weight: 700; color: var(--accent); display: inline-flex; gap: 6px; align-items: center; padding-bottom: 6px; }
+  .rev-link svg { width: 11px; height: 11px; }
+  .review { background: var(--white); box-shadow: var(--shadow); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px; }
+  .rev-top { display: flex; justify-content: space-between; align-items: center; }
+  .stars { color: var(--accent); font-size: 12px; letter-spacing: 2px; }
+  .verified { background: var(--bg2); border-radius: 9999px; padding: 2px 8px; font-size: 11px; color: var(--body); }
+  .quote { font-style: italic; font-size: 16px; line-height: 26px; color: var(--ink); }
+  .rev-foot { border-top: 1px solid var(--bg2); padding-top: 13px; display: flex; justify-content: space-between; align-items: center; }
+  .rev-foot b { display: block; font-size: 16px; font-weight: 600; color: var(--ink); }
+  .rev-foot small { display: block; font-size: 12px; font-weight: 600; letter-spacing: .48px; color: var(--body); }
+  .rev-foot svg { color: var(--accent); width: 18px; height: 18px; }
+
+  /* Lead form */
+  .lead { background: var(--bg3); }
+  .lead-grid { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: center; }
+  .lead-left { display: flex; flex-direction: column; gap: 16px; }
+  .lead-left h2 { font-size: 36px; letter-spacing: -.72px; line-height: 45px; }
+  .lead-left > p { font-size: 16px; line-height: 26px; color: var(--body); }
+  .steps { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
+  .step { display: flex; gap: 8px; align-items: center; font-size: 14px; font-weight: 500; color: var(--ink); line-height: 20px; }
+  .step b { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--white); font-size: 12px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+  .anti { background: var(--white); box-shadow: var(--shadow); border-radius: 12px; padding: 16px; margin-top: 8px; }
+  .anti h5 { display: flex; gap: 8px; align-items: center; font-size: 14px; font-weight: 700; color: var(--ink); }
+  .anti h5 svg { color: var(--accent); width: 16px; height: 20px; }
+  .anti p { font-size: 14px; line-height: 22px; margin-top: 4px; color: var(--body); }
+  .form-card { background: var(--white); border-radius: 16px; padding: 32px; box-shadow: 0 20px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1); display: flex; flex-direction: column; gap: 16px; }
+  .form-card h3 { font-size: 24px; letter-spacing: -.24px; line-height: 32px; }
+  .form-card .sub { font-size: 14px; line-height: 22px; color: var(--body); margin-top: -10px; }
+  form { display: flex; flex-direction: column; gap: 16px; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.full { grid-column: 1 / -1; }
+  .field-head { display: flex; justify-content: space-between; align-items: center; }
+  .field label { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .field .hint { font-size: 12px; font-weight: 600; letter-spacing: .48px; color: var(--muted); }
+  .field input { background: var(--bg); border: 1px solid transparent; border-radius: 12px; padding: 15px 16px; font-size: 16px; color: var(--ink); width: 100%; transition: border-color .15s ease; }
+  .field input::placeholder { color: #9ca3af; }
+  .field input:focus { outline: none; border-color: var(--accent); background: var(--white); }
+  .submit { background: var(--accent); color: var(--white); padding: 14px 24px; font-size: 16px; font-weight: 700; width: 100%; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1); }
+  .submit:disabled { opacity: .7; cursor: not-allowed; transform: none; }
+  .micro { text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .48px; color: var(--muted); }
+  .status { font-size: 14px; font-weight: 600; text-align: center; min-height: 20px; }
+  .status.ok { color: #1f7a3d; }
+  .status.err { color: var(--accent); }
+
+  /* FAQ */
+  .faq { background: var(--cream); padding: 32px 200px; }
+  .faq-wrap { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+  .faq-head { text-align: center; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .faq-head h2 { font-size: 36px; letter-spacing: -.72px; line-height: 44px; text-align: center; }
+  .faq-head p { font-size: 16px; line-height: 26px; color: var(--body); }
+  .faq-list { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
+  .faq-item { background: var(--white); border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.05); overflow: hidden; }
+  .faq-q { width: 100%; background: none; border: none; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 24px; font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 20px; line-height: 28px; color: var(--ink); }
+  .faq-q .chev { width: 12px; height: 8px; flex: 0 0 auto; color: var(--accent); transition: transform .2s ease; }
+  .faq-item.open .chev { transform: rotate(180deg); }
+  .faq-a { display: none; padding: 0 24px 24px; font-size: 16px; line-height: 26px; color: var(--body); }
+  .faq-item.open .faq-a { display: block; }
+  .faq-help { background: var(--bg2); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .faq-help h4 { font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 20px; color: var(--ink); line-height: 28px; }
+  .faq-help p { font-size: 14px; line-height: 22px; color: var(--body); }
+  .call-dark { background: var(--ink); color: var(--white); padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; box-shadow: var(--shadow); }
+  .call-dark svg { width: 12px; height: 12px; }
+
+  /* Map / neighbourhood */
+  .ground { background: var(--bg); }
+  .ground-grid { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: center; }
+  .ground-left { display: flex; flex-direction: column; gap: 12px; }
+  .ground-left h2 { font-size: 36px; letter-spacing: -.72px; line-height: 44px; }
+  .ground-left > p { font-size: 16px; line-height: 26px; color: var(--body); }
+  .hoods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 8px; }
+  .hood { background: var(--white); border-radius: 12px; padding: 12px; padding-bottom: 14px; box-shadow: var(--shadow); }
+  .hood b { display: block; font-size: 14px; color: var(--ink); line-height: 20px; }
+  .hood small { display: block; font-size: 11px; color: var(--muted); line-height: 16.5px; }
+  .map { position: relative; height: 320px; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1); background: linear-gradient(160deg, #b8c4b5 0%, #7b8f84 50%, #3d4f52 100%); }
+  .map img { width: 100%; height: 100%; object-fit: cover; }
+  .map::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(7,22,30,.8), rgba(7,22,30,0)); }
+  .map-chip { position: absolute; left: 16px; bottom: 16px; z-index: 2; background: rgba(7,22,30,.8); border: 1px solid rgba(255,255,255,.2); border-radius: 9999px; padding: 7px 13px; color: var(--cream); font-size: 12px; font-weight: 600; line-height: 16px; display: inline-flex; gap: 8px; align-items: center; }
+  .map-chip svg { width: 10px; height: 12px; color: var(--accent); }
+  .map-tag { position: absolute; right: 16px; bottom: 16px; z-index: 2; background: rgba(0,0,0,.4); border-radius: 9999px; padding: 4px 10px; color: rgba(252,249,244,.8); font-size: 11px; line-height: 16.5px; }
+
+  /* Footer */
+  footer { background: var(--dark); padding: 32px 40px 24px; color: var(--foot); }
+  .foot-top { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 32px; padding-bottom: 33px; border-bottom: 1px solid rgba(195,199,202,.2); }
+  .foot-brand { display: flex; flex-direction: column; gap: 8px; }
+  .foot-logo { display: flex; gap: 12px; align-items: center; }
+  .foot-logo .box { background: var(--white); padding: 6px; border-radius: 8px; }
+  .foot-logo .box img { width: 48px; height: 48px; object-fit: contain; }
+  .foot-logo b { display: block; font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 20px; color: var(--white); letter-spacing: -.5px; line-height: 20px; }
+  .foot-logo i { display: block; font-size: 14px; font-style: italic; color: var(--foot); line-height: 20px; margin-top: 4px; }
+  .foot-founder { font-size: 14px; display: flex; gap: 6px; align-items: center; padding-top: 4px; }
+  .foot-founder b { color: var(--white); font-weight: 600; }
+  .foot-addr { font-size: 14px; line-height: 22px; }
+  .foot-contact { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }
+  .foot-contact a, .foot-contact span { display: flex; gap: 8px; align-items: center; color: var(--cream); font-size: 14px; font-weight: 500; line-height: 20px; }
+  .foot-contact svg { width: 13px; height: 13px; color: var(--accent); flex: 0 0 auto; }
+  .foot-col h4 { font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 20px; color: var(--cream); line-height: 28px; margin-bottom: 16px; }
+  .foot-links { display: flex; flex-direction: column; gap: 8px; }
+  .foot-links a { font-size: 14px; line-height: 22px; color: var(--foot); }
+  .foot-links a:hover { color: var(--cream); }
+  .foot-col p { font-size: 14px; line-height: 22px; }
+  .foot-col .ig { display: flex; gap: 8px; align-items: center; color: var(--cream); font-weight: 600; font-size: 14px; margin-top: 12px; }
+  .foot-col .ig svg { width: 15px; height: 14px; color: var(--accent); }
+  .rera { font-size: 12px; font-weight: 600; letter-spacing: .48px; line-height: 19.5px; margin-top: 16px; color: var(--foot); }
+  .foot-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 16px; font-size: 12px; font-weight: 600; letter-spacing: .48px; flex-wrap: wrap; gap: 12px; }
+  .foot-bottom nav { display: flex; gap: 16px; }
+  .foot-bottom a:hover { color: var(--cream); }
+
+  /* Floating contact buttons */
+  .float { position: fixed; right: 24px; bottom: 24px; z-index: 60; display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+  .float a { display: inline-flex; gap: 8px; align-items: center; padding: 12px 16px; border-radius: 12px; color: var(--white); font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,.15); transition: transform .15s ease; }
+  .float a:hover { transform: translateY(-2px); }
+  .float .f-call { background: var(--ink); }
+  .float .f-wa { background: var(--green); }
+  .float svg { width: 14px; height: 14px; }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .nav { display: none; }
+    .section, .hero { padding-left: 24px; padding-right: 24px; }
+    .trust, .stats { padding-left: 24px; padding-right: 24px; }
+    .faq { padding-left: 24px; padding-right: 24px; }
+  }
+  @media (max-width: 900px) {
+    .topbar .right { display: none; }
+    .direct { display: none; }
+    .hero-grid, .lead-grid, .ground-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 36px; line-height: 44px; letter-spacing: -.72px; }
+    .routes { grid-template-columns: repeat(3, 1fr); }
+    .cards3, .stats-row { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .cards3 { grid-template-columns: 1fr; }
+    .sec-head h2, .lead-left h2, .ground-left h2, .faq-head h2 { font-size: 28px; line-height: 36px; }
+    .foot-top { grid-template-columns: 1fr; }
+    .faq { padding-top: 32px; padding-bottom: 32px; }
+    .hero-visual { height: 340px; }
+  }
+  @media (max-width: 600px) {
+    .fields { grid-template-columns: 1fr; }
+    .routes { grid-template-columns: repeat(2, 1fr); }
+    .stats-row { grid-template-columns: 1fr; }
+    .header .wrap { padding: 0 16px; }
+    .trust-row { flex-direction: column; align-items: flex-start; }
+    .form-card { padding: 24px; }
+    .float { right: 16px; bottom: 16px; }
+    .float a { padding: 10px 14px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="wrap">
+    <div class="left">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><path d="M5 8.2l2 2 4-4.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Direct &amp; Verified North Bengaluru Properties</span>
+    </div>
+    <div class="right">
+      <span>Regulated &amp; RERA Advisory</span>
+      <strong>RERA: PRM/KA/RERA/1251/310/AG/230114</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="header">
+  <div class="wrap">
+    <a href="#top" class="brand" aria-label="PNP Properties home">
+      <img src="assets/pnp-logo.png" alt="PNP Properties logo" width="48" height="48">
+      <div>
+        <div class="brand-name">PNP Properties</div>
+        <div class="brand-tag">Turning spaces into statements</div>
+      </div>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="#top" class="active">Home</a>
+      <a href="#why">Why Us</a>
+      <a href="#reviews">Reviews</a>
+      <a href="#faq">Calculator &amp; FAQs</a>
+    </nav>
+    <div class="header-right">
+      <div class="direct">
+        <small>Direct Advisory</small>
+        <strong>+91 99017 22635</strong>
+      </div>
+      <a href="#contact" class="cta-accent">Talk to an Agent</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- Section 1: Hero & intent selector -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="pill"><i></i><span>Anti-broker anxiety advisory</span></span>
+        <h1 class="h">Turning spaces into statements.</h1>
+        <p class="hero-sub">Clear pricing, verified landlords, and zero hidden broker surprises across Kammanahalli, Kalyan Nagar, and North Bengaluru.</p>
+
+        <div class="label-cap">I am looking for:</div>
+        <div class="routes">
+          <a href="#contact" class="route">
+            <svg class="ri" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="12" height="14" rx="1"/><path d="M6 6h2M10 6h2M6 9h2M10 9h2M6 12h2M10 12h2"/></svg>
+            <b>Flat</b><small>1, 2 &amp; 3BHK</small>
+          </a>
+          <a href="#contact" class="route">
+            <svg class="ri" viewBox="0 0 20 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 7h16l-1 8H3z"/><path d="M4 7l1-4h10l1 4"/></svg>
+            <b>Shop</b><small>Retail &amp; Office</small>
+          </a>
+          <a href="#contact" class="route">
+            <svg class="ri" viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 10h18M3 10V6h14v4M1 13h18"/></svg>
+            <b>PG</b><small>Co-living</small>
+          </a>
+          <a href="#contact" class="route">
+            <svg class="ri" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="2" width="10" height="14"/><path d="M7 6h1M10 6h1M7 9h1M10 9h1M7 12h4"/></svg>
+            <b>Room</b><small>Single Suite</small>
+          </a>
+          <a href="#contact" class="route">
+            <svg class="ri" viewBox="0 0 21 21" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10l8.5-7 8.5 7M4 9v9h13V9"/></svg>
+            <b>Sell</b><small>Owners</small>
+          </a>
+        </div>
+
+        <div class="ctas">
+          <a href="#faq" class="link-btn">
+            <svg width="12" height="15" viewBox="0 0 12 15" fill="none" stroke="#07161e" stroke-width="1.5"><path d="M6 1l5 2v4c0 3-2.2 5.4-5 6.5C3.2 12.4 1 10 1 7V3z"/><path d="M4 7l1.5 1.5L8 5.5"/></svg>
+            See verified listings
+          </a>
+        </div>
+
+        <p class="reassure">Average initial response: <b>18 minutes</b> during working hours.</p>
+      </div>
+
+      <div class="hero-visual" role="img" aria-label="Sunlit balcony of a residence in Kalyan Nagar">
+        <img src="assets/hero-residence.jpg" alt="" onerror="this.remove()">
+        <div class="chip-top">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="5"/><path d="M4 6.2l1.4 1.4L8 4.8" stroke-linecap="round"/></svg>
+          Kalyan Nagar 2nd Block · On-Site Checked
+        </div>
+        <div class="caption">
+          <div>
+            <h3 class="h">2 &amp; 3BHK Serene Residences</h3>
+            <p>Fully vetted lease agreements &amp; zero hidden clauses</p>
+          </div>
+          <div class="meta">
+            <b>100% Khata A</b>
+            Legally<br>Verified
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Trust strip -->
+<div class="trust">
+  <div class="trust-row">
+    <div class="trust-loc">
+      <svg viewBox="0 0 16 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 19s6-5.6 6-10A6 6 0 0 0 2 9c0 4.4 6 10 6 10z"/><circle cx="8" cy="9" r="2"/></svg>
+      <span>Kammanahalli · Kalyan Nagar · Bengaluru</span>
+    </div>
+    <div class="trust-items">
+      <span class="ok"><span class="star">★</span> <b>4.9/5</b> <span class="muted">Average Client Rating</span></span>
+      <span class="sep">•</span>
+      <span class="ok"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="6"/><path d="M4.5 7.2l1.7 1.7L9.5 5.5" stroke-linecap="round"/></svg>100% On-Site Verified Homes</span>
+      <span class="sep">•</span>
+      <span class="ok"><svg viewBox="0 0 12 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1l5 2v4c0 3-2.2 5.4-5 6.5C3.2 12.4 1 10 1 7V3z"/></svg>Zero Surprise Brokerage Guarantee</span>
+    </div>
+  </div>
+</div>
+
+<!-- Section 2: Audience segmentation -->
+<section class="section audience" id="why">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Tailored experience</span>
+      <h2 class="h">Designed for the people living in Bengaluru, not just transactions.</h2>
+      <p>Whether you are relocating from another state, scaling a neighbourhood café, or seeking responsible tenants for your ancestral home.</p>
+    </div>
+
+    <div class="cards3">
+      <article class="card">
+        <div class="ic-box"><svg viewBox="0 0 16 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 19s6-5.6 6-10A6 6 0 0 0 2 9c0 4.4 6 10 6 10z"/><circle cx="8" cy="9" r="2"/></svg></div>
+        <span class="tag">Tenants &amp; Professionals</span>
+        <h3 class="h">Flats, PGs &amp; Co-Living</h3>
+        <p>Escape the dreaded Bengaluru deposit traps and bait-and-switch visits. We provide standardized lease contracts and authentic neighborhood previews.</p>
+        <ul>
+          <li>Transparent deposit caps (no 10-month defaults)</li>
+          <li>Verified lease draft upfront before token payment</li>
+          <li>Safe neighborhood metrics &amp; water supply audits</li>
+        </ul>
+        <a href="#contact" class="more">Browse rental residences</a>
+      </article>
+
+      <article class="card">
+        <div class="ic-box"><svg viewBox="0 0 18 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 6l1.5-4h13L17 6v1H1z"/><path d="M2 7v8h14V7M6 15v-4h6v4"/></svg></div>
+        <span class="tag">Entrepreneurs &amp; Brands</span>
+        <h3 class="h">Commercial &amp; Boutique Offices</h3>
+        <p>High street visibility along Kammanahalli Main Road, HRBR Ring Road, and peaceful lane-side studio workspaces without endless middlemen.</p>
+        <ul>
+          <li>Actual footfall &amp; vehicle traffic estimates</li>
+          <li>Clear BBMP commercial zoning &amp; electrical approvals</li>
+          <li>Direct landlord negotiation mediated cleanly</li>
+        </ul>
+        <a href="#contact" class="more">Find retail &amp; workspace</a>
+      </article>
+
+      <article class="card">
+        <div class="ic-box"><svg viewBox="0 0 16 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 1l6 2.5v5c0 4-2.7 7.3-6 8.5C4.7 15.8 2 12.5 2 8.5v-5z"/></svg></div>
+        <span class="tag">Property Owners &amp; NRIs</span>
+        <h3 class="h">Hassle-Free Renting &amp; Resale</h3>
+        <p>Zero tenant solicitation harassment. We treat your property with dignity, running background checks and handling documentation end-to-end.</p>
+        <ul>
+          <li>Thorough identity &amp; employment verification</li>
+          <li>Standardized digital agreements &amp; key custody</li>
+          <li>Move-in and move-out condition photographic audits</li>
+        </ul>
+        <a href="#contact" class="more">List your property safely</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- Section 3: Achievements -->
+<section class="stats">
+  <div class="stats-row">
+    <div class="stat">
+      <div class="num">420+</div>
+      <h4>Homes &amp; Spaces</h4>
+      <p>Successfully placed across Kalyan Nagar &amp; Kammanahalli.</p>
+    </div>
+    <div class="stat">
+      <div class="num accent">18 mins</div>
+      <h4>Callback Guarantee</h4>
+      <p>Fast initial consultation by local sector specialists.</p>
+    </div>
+    <div class="stat">
+      <div class="num">98.4%</div>
+      <h4>Deposit Security</h4>
+      <p>Compliant refund rate via standardized legal escrow templates.</p>
+    </div>
+    <div class="stat">
+      <div class="num">5 yrs</div>
+      <h4>Ground Presence</h4>
+      <p>Deep local ties, street-by-street clarity, and RERA compliance.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section properties" id="properties">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Available now</span>
+      <h2 class="h">Verified properties in North Bengaluru.</h2>
+    </div>
+    <div class="filters" id="filters">
+      <button class="chip active" data-filter="all">All</button>
+      <button class="chip" data-filter="Flat">Flats</button>
+      <button class="chip" data-filter="Shop">Shops</button>
+      <button class="chip" data-filter="PG">PGs</button>
+      <button class="chip" data-filter="Room">Rooms</button>
+    </div>
+    <div class="prop-grid" id="propGrid">
+      <p class="prop-empty">Loading properties...</p>
+    </div>
+  </div>
+</section>
+
+<!-- Section 4: Verified reviews -->
+<section class="section reviews" id="reviews">
+  <div class="wrap">
+    <div class="rev-head">
+      <div class="sec-head">
+        <span class="eyebrow">Unfiltered experiences</span>
+        <h2 class="h">Trusted by tenants, retailers, and long-term owners.</h2>
+      </div>
+      <a href="#reviews" class="rev-link">
+        Read all 140+ verified Google Reviews ★ 4.9
+        <svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 1h6v6M10 1L4 7M1 4v6h6"/></svg>
+      </a>
+    </div>
+
+    <div class="cards3" style="grid-template-columns: repeat(3, 1fr); margin-top: 24px;">
+      <article class="review">
+        <div>
+          <div class="rev-top">
+            <span class="stars">★★★★★</span>
+            <span class="verified">Google Verified</span>
+          </div>
+          <p class="quote" style="margin-top:16px;">“Moving from Mumbai, the broker anxiety was intense. PNP showed me 3 exact matches in an afternoon, gave me the landlord’s exact draft upfront, and didn’t charge ridiculous surprise fees.”</p>
+        </div>
+        <div class="rev-foot">
+          <div><b>Priya N.</b><small>Product Designer · 2BHK in Kalyan Nagar</small></div>
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="7"/><path d="M6 9.2l2 2 4-4.2" stroke-linecap="round"/></svg>
+        </div>
+      </article>
+      <article class="review">
+        <div>
+          <div class="rev-top">
+            <span class="stars">★★★★★</span>
+            <span class="verified">Google Verified</span>
+          </div>
+          <p class="quote" style="margin-top:16px;">“Finding a commercial retail space with genuine footfall data without dealing with 5 middle-men seemed impossible until PNP. Transparent commercial lease from day one.”</p>
+        </div>
+        <div class="rev-foot">
+          <div><b>Harish K.</b><small>Artisan Bakery Owner · Kammanahalli Main Rd</small></div>
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="7"/><path d="M6 9.2l2 2 4-4.2" stroke-linecap="round"/></svg>
+        </div>
+      </article>
+      <article class="review">
+        <div>
+          <div class="rev-top">
+            <span class="stars">★★★★★</span>
+            <span class="verified">Google Verified</span>
+          </div>
+          <p class="quote" style="margin-top:16px;">“I live in Singapore and entrusted PNP with my duplex villa. They vetted tenant families thoroughly, drafted the agreement, and managed keys seamlessly.”</p>
+        </div>
+        <div class="rev-foot">
+          <div><b>Mathew V.</b><small>NRI Owner · HRBR Layout</small></div>
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="7"/><path d="M6 9.2l2 2 4-4.2" stroke-linecap="round"/></svg>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- Section 5: Lead form -->
+<section class="section lead" id="contact">
+  <div class="wrap">
+    <div class="lead-grid">
+      <div class="lead-left">
+        <span class="eyebrow">Fast &amp; focused assistance</span>
+        <h2 class="h">Stop scrolling dubious portal postings.</h2>
+        <p>Connect with a grounded North Bengaluru area specialist. Tell us what you need; we will filter only strictly verified, available properties.</p>
+        <div class="steps">
+          <div class="step"><b>1</b>18-minute guaranteed callback during business hours</div>
+          <div class="step"><b>2</b>Exact photos &amp; video walkthrough sent on WhatsApp</div>
+          <div class="step"><b>3</b>Direct inspection arranged with zero pressure</div>
+        </div>
+        <div class="anti">
+          <h5><svg viewBox="0 0 16 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 1l6 2.5v5c0 4-2.7 7.3-6 8.5C4.7 15.8 2 12.5 2 8.5v-5z"/></svg>Strict Anti-Spam Commitment</h5>
+          <p>Your contact details are strictly kept in-house. Never sold to call-centers or random real estate brokers.</p>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <div>
+          <h3 class="h">Get a transparent callback today</h3>
+          <p class="sub" style="margin-top:4px;">Enter your details. An agent will review live vacancies before ringing you.</p>
+        </div>
+
+        <form id="leadForm" novalidate>
+          <div class="fields">
+            <div class="field">
+              <label for="name">Your Full Name</label>
+              <input id="name" name="name" type="text" placeholder="e.g. Rahul Sharma" autocomplete="name" required>
+            </div>
+            <div class="field">
+              <div class="field-head">
+                <label for="phone">Phone Number</label>
+                <span class="hint">10-digit mobile number</span>
+              </div>
+              <input id="phone" name="phone" type="tel" placeholder="e.g. 98765 43210" autocomplete="tel" inputmode="tel" required>
+            </div>
+            <div class="field full">
+              <label for="email">Email Address</label>
+              <input id="email" name="email" type="email" placeholder="e.g. rahul@example.com" autocomplete="email">
+            </div>
+          </div>
+
+          <button type="submit" class="btn submit" id="submitBtn">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 1.5h2.5l1 3-1.5 1c.7 1.6 1.9 2.8 3.5 3.5l1-1.5 3 1V12c0 .8-.6 1.5-1.5 1.5C6.3 13.5 1.5 8.7 1.5 3 1.5 2.1 2.2 1.5 3 1.5z"/></svg>
+            <span id="submitText">Get a transparent callback</span>
+          </button>
+          <div class="status" id="formStatus" role="status" aria-live="polite"></div>
+          <p class="micro">An agent calls you back within 18 minutes. No spam calls, guaranteed.</p>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section 6: FAQ -->
+<section class="faq" id="faq">
+  <div class="faq-wrap">
+    <div class="faq-head">
+      <span class="eyebrow">Unapologetic transparency</span>
+      <h2 class="h">Frequently asked, openly answered.</h2>
+      <p>We dismantled typical brokerage ambiguity. Here is exactly how PNP Properties operates.</p>
+    </div>
+
+    <div class="faq-list">
+      <div class="faq-item open">
+        <button class="faq-q" aria-expanded="true">What are your brokerage fees and how does pricing work?
+          <svg class="chev" viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1.5l5 5 5-5"/></svg></button>
+        <div class="faq-a">For standard residential rentals, our fee is the standard 1-month brokerage upon finalized agreement signing. We never charge viewing fees, platform convenience fees, or token deposit cuts. For commercial and high-ticket properties, transparent tiered slabs are mutually drafted before negotiations commence. What you see is what you pay.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">How do you verify properties and prevent scam listings?
+          <svg class="chev" viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1.5l5 5 5-5"/></svg></button>
+        <div class="faq-a">Every listing goes through a 3-tier advocate verification before it is published. We check title documents, confirm the owner's identity, and visit the property ourselves before we list it.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">I’m a first-time renter in Bengaluru. How do you handle security deposits?
+          <svg class="chev" viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1.5l5 5 5-5"/></svg></button>
+        <div class="faq-a">Deposits are agreed in writing before you pay anything. We follow standardized legal escrow templates, cap deposits transparently, and walk you through the refund conditions so there are no surprises at move-out.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Can you help me list my property if I live out of station or abroad?
+          <svg class="chev" viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1.5l5 5 5-5"/></svg></button>
+        <div class="faq-a">Yes. Many of our owners are NRIs or live in other cities. We handle tenant vetting, digital agreements, key custody, and move-in and move-out photographic audits, and send you regular updates.</div>
+      </div>
+    </div>
+
+    <div class="faq-help">
+      <div>
+        <h4>Still have a specific question?</h4>
+        <p>Speak directly to an agent on the phone right now.</p>
+      </div>
+      <a href="tel:+919901722635" class="call-dark">
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 1.5l2 -.3 1 2.5-1.2 1c.6 1.2 1.5 2.1 2.7 2.7l1-1.2 2.5 1-.3 2c-.1.5-.5.8-1 .8C5.3 10.5 1.5 6.7 1.2 2.5c0-.5.3-.9.8-1z"/></svg>
+        Call +91 99017 22635
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Section 7: Neighbourhood -->
+<section class="section ground">
+  <div class="wrap">
+    <div class="ground-grid">
+      <div class="ground-left">
+        <span class="eyebrow">Ground focus</span>
+        <h2 class="h">The heart of North Bengaluru.</h2>
+        <p>From the bustling food streets of Kammanahalli Nehru Road to the quiet leafy avenues of HRBR 2nd and 3rd blocks. We know every street, landlord history, and water supply profile.</p>
+        <div class="hoods">
+          <div class="hood"><b>Kammanahalli</b><small>High-energy hubs &amp; PGs</small></div>
+          <div class="hood"><b>Kalyan Nagar</b><small>Prime 2BHK/3BHK family homes</small></div>
+          <div class="hood"><b>HRBR Layout</b><small>Premium independent villas</small></div>
+          <div class="hood"><b>5 yrs</b><small>Gated communities &amp; Tech commute</small></div>
+        </div>
+      </div>
+
+      <div class="map" role="img" aria-label="Street view of Kalyan Nagar and Kammanahalli">
+        <img src="assets/neighbourhood.jpg" alt="" onerror="this.remove()">
+        <div class="map-chip">
+          <svg viewBox="0 0 10 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 11s4-3.6 4-6.5A4 4 0 0 0 1 4.5C1 7.4 5 11 5 11z"/><circle cx="5" cy="4.5" r="1.3"/></svg>
+          Kalyan Nagar &amp; Kammanahalli Hub
+        </div>
+        <div class="map-tag">North Bengaluru</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- Footer -->
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <div class="foot-logo">
+          <div class="box"><img src="assets/pnp-logo.png" alt="PNP Properties logo" width="48" height="48"></div>
+          <div>
+            <b>PNP Properties</b>
+            <i>Turning spaces into statements.</i>
+          </div>
+        </div>
+        <div class="foot-founder">Founded by <b>Mahammed Shamsheer</b></div>
+        <div class="foot-addr">Kalyan Nagar, Kammanahalli, Bangalore</div>
+        <div class="foot-contact">
+          <a href="tel:+919901722635">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 1.5l2 -.3 1 2.5-1.2 1c.6 1.2 1.5 2.1 2.7 2.7l1-1.2 2.5 1-.3 2c-.1.5-.5.8-1 .8C5.3 10.5 1.5 6.7 1.2 2.5c0-.5.3-.9.8-1z"/></svg>
+            +91 99017 22635
+          </a>
+          <a href="mailto:pnppropretiesbng@gmail.com">
+            <svg viewBox="0 0 14 11" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1" y="1" width="12" height="9" rx="1"/><path d="M1 2l6 4 6-4"/></svg>
+            pnppropretiesbng@gmail.com
+          </a>
+          <span>
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="7" cy="7" r="6"/><path d="M7 3.5V7l2.5 1.5"/></svg>
+            Mon – Sat: 9:30 AM – 7:30 PM
+          </span>
+        </div>
+      </div>
+
+      <div class="foot-col">
+        <h4>Quick Navigation &amp; Filters</h4>
+        <div class="foot-links">
+          <a href="#contact">Buy</a>
+          <a href="#contact">Rent</a>
+          <a href="#contact">Shops</a>
+          <a href="#contact">PGs &amp; Rooms</a>
+          <a href="#contact">Sell with us</a>
+          <a href="#contact">Contact</a>
+        </div>
+      </div>
+
+      <div class="foot-col">
+        <h4>Verified Channel &amp; Legal</h4>
+        <p>Follow our weekly neighborhood walkthroughs and legal clarity breakdowns.</p>
+        <a href="https://www.instagram.com/pnp_properteis" target="_blank" rel="noopener" class="ig">
+          <svg viewBox="0 0 15 14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="13" height="12" rx="3"/><circle cx="7.5" cy="7" r="2.8"/></svg>
+          @pnp_properteis
+        </a>
+        <p class="rera">RERA Registration: PRM/KA/RERA/1251/310/AG/230114. All titles undergo 3-tier advocate verification before listing. Transparent documentation, zero hidden brokerage.</p>
+      </div>
+    </div>
+
+    <div class="foot-bottom">
+      <span>© 2026 PNP Properties. Built for thoughtful Bengaluru home seekers.</span>
+      <nav>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">RERA Disclosure</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+<!-- Floating contact buttons -->
+<div class="float">
+  <a href="tel:+919901722635" class="f-call" aria-label="Call PNP Properties">
+    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 1.5l2 -.3 1 2.5-1.2 1c.6 1.2 1.5 2.1 2.7 2.7l1-1.2 2.5 1-.3 2c-.1.5-.5.8-1 .8C5.3 10.5 1.5 6.7 1.2 2.5c0-.5.3-.9.8-1z"/></svg>
+    Call Us
+  </a>
+  <a href="https://wa.me/919901722635" target="_blank" rel="noopener" class="f-wa" aria-label="Chat with PNP Properties on WhatsApp">
+    <svg viewBox="0 0 14 14" fill="currentColor"><path d="M7 1a6 6 0 0 0-5.2 9L1 13l3.1-.8A6 6 0 1 0 7 1zm0 1.2a4.8 4.8 0 1 1-2.5 8.9l-.2-.1-1.8.5.5-1.8-.1-.2A4.8 4.8 0 0 1 7 2.2z"/></svg>
+    WhatsApp
+  </a>
+</div>
+
+<script>
+  // ---------- FAQ accordion ----------
+  document.querySelectorAll('.faq-q').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var item = btn.parentElement;
+      var isOpen = item.classList.toggle('open');
+      btn.setAttribute('aria-expanded', String(isOpen));
+    });
+  });
+
+  // ---------- Lead form -> Google Apps Script ----------
+  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzLebeayLJVCqB9SwMNktmoroVVR4VMjYsu3gjmjM0l-q3AQ6TlWPAnxnQ7dxFLIJI4eA/exec";
+
+  var form = document.getElementById('leadForm');
+  var submitBtn = document.getElementById('submitBtn');
+  var submitText = document.getElementById('submitText');
+  var statusEl = document.getElementById('formStatus');
+
+  function setStatus(message, type) {
+    statusEl.textContent = message;
+    statusEl.className = 'status ' + (type || '');
+  }
+
+  function setLoading(isLoading) {
+    submitBtn.disabled = isLoading;
+    submitText.textContent = isLoading ? 'Sending...' : 'Get a transparent callback';
+  }
+
+  function showSuccess() {
+    setLoading(false);
+    setStatus('Thanks! An agent will call you back within 18 minutes.', 'ok');
+    form.reset();
+  }
+
+  function showError() {
+    setLoading(false);
+    setStatus('Something went wrong. Please call +91 99017 22635 instead.', 'err');
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    setStatus('', '');
+
+    var name = document.getElementById('name').value.trim();
+    var email = document.getElementById('email').value.trim();
+    var phone = document.getElementById('phone').value.trim();
+
+    if (!name || !phone) {
+      setStatus('Please enter your name and phone number.', 'err');
+      return;
+    }
+
+    var params = new URLSearchParams({ name: name, email: email, phone: phone });
+    var url = SCRIPT_URL + "?" + params.toString();
+
+    setLoading(true);
+
+    fetch(url, { method: "GET", mode: "no-cors" })
+      .then(function () { showSuccess(); })
+      .catch(function () { showError(); });
+  });
+    // ---------- Properties from Google Sheet ----------
+  var allProps = [];
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+ function priceText(p) {
+    if (p === '' || p == null) return '';
+    var n = Number(p);
+    return isNaN(n) ? String(p) : '₹ ' + n.toLocaleString('en-IN');
+  }
+
+  function normCat(c) {
+    return String(c || '').trim().toLowerCase().replace(/s$/, '');
+  }
+
+ function propCard(p) {
+    var img = p.image ? '<img src="' + esc(p.image) + '" alt="' + esc(p.title) + '" onerror="this.remove()">' : '';
+    var isRent = /rent/i.test(p.deal || '');
+    var msg = encodeURIComponent('Hey PNP, I am looking for a ' + p.category + ' to ' + (isRent ? 'rent' : 'buy') + ': ' + p.title);
+    return '<article class="prop">' +
+      '<div class="prop-img">' + img + '<span class="prop-badge">' + esc(p.status || p.deal) + '</span></div>' +
+      '<div class="prop-body">' +
+        '<span class="prop-meta">' + esc(p.category) + ' · ' + esc(p.deal) + '</span>' +
+        '<h3 class="h">' + esc(p.title) + '</h3>' +
+        '<div class="prop-loc">' + esc(p.location) + '</div>' +
+        '<div class="prop-price">' + esc(priceText(p.price)) + (isRent && p.price !== '' ? ' / month' : '') + '</div>' +
+        '<div class="prop-meta">' + esc(p.details) + '</div>' +
+        '<p class="prop-desc">' + esc(p.description) + '</p>' +
+        '<div class="prop-cta"><a href="https://wa.me/919901722635?text=' + msg + '" target="_blank" rel="noopener">Enquire on WhatsApp</a></div>' +
+      '</div></article>';
+  }
+  function drawProperties(filter) {
+    var grid = document.getElementById('propGrid');
+    var f = normCat(filter);
+    var list = allProps.filter(function (p) {
+            return f === 'all' || normCat(p.category) === f;
+    });
+    if (!list.length) {
+      grid.innerHTML = '<p class="prop-empty">No properties in this category yet. Call us and we will find one for you.</p>';
+      return;
+    }
+    grid.innerHTML = list.map(propCard).join('');
+  }
+
+  // Called by the JSONP response from Apps Script
+  function renderProperties(res) {
+    allProps = (res && res.properties) || [];
+    var active = document.querySelector('#filters .chip.active');
+    drawProperties(active ? active.getAttribute('data-filter') : 'all');
+  }
+
+  document.querySelectorAll('#filters .chip').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#filters .chip').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      drawProperties(btn.getAttribute('data-filter'));
+    });
+  });
+
+  (function loadProperties() {
+    var s = document.createElement('script');
+    s.src = SCRIPT_URL + '?action=properties&callback=renderProperties';
+    s.onerror = function () {
+      document.getElementById('propGrid').innerHTML =
+        '<p class="prop-empty">Could not load properties right now. Please call +91 99017 22635.</p>';
+    };
+    document.body.appendChild(s);
+  })();
+</script>
+
+</body>
+</html>
